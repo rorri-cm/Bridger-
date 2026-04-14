@@ -130,10 +130,21 @@ local function rs()
     if not _G.ps then return end
     local h = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if not h then return end
-    pcall(function()
-        h.CFrame = CFrame.new(_G.sx, _G.sy, _G.sz)
-        if _G.camCF then Cam.CFrame = _G.camCF end
-    end)
+    local startTick = tick()
+    while tick() - startTick < 10 do
+        pcall(function()
+            h.CFrame = CFrame.new(_G.sx, _G.sy, _G.sz)
+            if _G.camCF then Cam.CFrame = _G.camCF end
+        end)
+        task.wait(0.2)
+        local px, py, pz = gp(h)
+        if px and _G.sx then
+            local dx = px - _G.sx
+            local dy = py - _G.sy
+            local dz = pz - _G.sz
+            if math.sqrt(dx*dx + dy*dy + dz*dz) < 10 then break end
+        end
+    end
 end
 
 -- ═══════════════════════════════════════════════════════════
@@ -566,9 +577,24 @@ local function tpToChest()
     if not h then return end
     if chest then
         local offset = h.CFrame.LookVector * (-1.5)
-        pcall(function()
-            h.CFrame = CFrame.new(chest.Position.X + offset.X, chest.Position.Y, chest.Position.Z + offset.Z)
-        end)
+        local targetX = chest.Position.X + offset.X
+        local targetY = chest.Position.Y
+        local targetZ = chest.Position.Z + offset.Z
+        
+        local startTick = tick()
+        while tick() - startTick < 10 do
+            pcall(function()
+                h.CFrame = CFrame.new(targetX, targetY, targetZ)
+            end)
+            task.wait(0.2)
+            local px, py, pz = gp(h)
+            if px then
+                local dx = px - targetX
+                local dy = py - targetY
+                local dz = pz - targetZ
+                if math.sqrt(dx*dx + dy*dy + dz*dz) < 10 then break end
+            end
+        end
     else
         rs()
     end
@@ -577,13 +603,18 @@ end
 local function pm()
     ws()
     task.wait(1)
+    local hadChest = findChest() ~= nil
     tpToChest()
     task.wait(0.5)
-    if S.autoChestEnabled then
+    if S.autoChestEnabled and hadChest then
         keypress(0x45)
         task.wait(S.chestHoldTime)
         keyrelease(0x45)
         task.wait(0.5)
+        rs()
+    elseif hadChest then
+        task.wait(1)
+        rs()
     end
 end
 
@@ -736,13 +767,13 @@ local function sc()
                 local ok, ic = pcall(function() return v:GetAttribute("IsCorpsePart") end)
                 if ok and ic == true then
                     local dist = gd(v)
-                    if dist < 999999 then corpse, cDist = v, dist; return end
+                    if dist <= 15000 then corpse, cDist = v, dist; return end
                 end
                 pcall(function()
                     local name = tostring(v.Name):lower()
                     if name:find("corpse") or name:find("saint") or name:find("body") then
                         local dist = gd(v)
-                        if dist < 999999 then corpse, cDist = v, dist end
+                        if dist <= 15000 then corpse, cDist = v, dist end
                     end
                 end)
                 if corpse then return end
