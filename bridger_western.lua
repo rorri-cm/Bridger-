@@ -42,6 +42,7 @@ local S = {
 }
 
 local mashing, corpse, cDist, pNear, lastProxTp = false, nil, 0, false, 0
+local isOpeningChest = false
 local bypassState = {
     stage = "idle", corpsePosition = nil, fishingPosition = nil,
     corpseFoundTime = 0, lastSafePlaceCheck = 0,
@@ -577,45 +578,55 @@ local function tpToChest()
     if not h then return end
     if chest then
         local offset = h.CFrame.LookVector * (-1.5)
-        local targetX = chest.Position.X + offset.X
-        local targetY = chest.Position.Y
-        local targetZ = chest.Position.Z + offset.Z
-        
-        local startTick = tick()
-        while tick() - startTick < 10 do
+        pcall(function()
+            h.CFrame = CFrame.new(chest.Position.X + offset.X, chest.Position.Y, chest.Position.Z + offset.Z)
+        end)
+    else
+        if not _G.ps then return end
+        local targetX, targetY, targetZ = _G.sx, _G.sy, _G.sz
+        local maxAttempts = 10
+        local attempt = 0
+        while attempt < maxAttempts do
             pcall(function()
-                h.CFrame = CFrame.new(targetX, targetY, targetZ)
+                h = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+                if h then
+                    h.CFrame = CFrame.new(targetX, targetY, targetZ)
+                    if _G.camCF then Cam.CFrame = _G.camCF end
+                end
             end)
-            task.wait(0.2)
-            local px, py, pz = gp(h)
-            if px then
-                local dx = px - targetX
-                local dy = py - targetY
-                local dz = pz - targetZ
-                if math.sqrt(dx*dx + dy*dy + dz*dz) < 10 then break end
+            task.wait(0.3)
+            attempt = attempt + 1
+            h = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+            if h then
+                local dx = h.Position.X - targetX
+                local dy = h.Position.Y - targetY
+                local dz = h.Position.Z - targetZ
+                if math.sqrt(dx*dx + dy*dy + dz*dz) < 5 then
+                    break
+                end
             end
         end
-    else
-        rs()
     end
 end
 
 local function pm()
-    ws()
-    task.wait(1)
-    local hadChest = findChest() ~= nil
-    tpToChest()
-    task.wait(0.5)
-    if S.autoChestEnabled and hadChest then
-        keypress(0x45)
-        task.wait(S.chestHoldTime)
-        keyrelease(0x45)
-        task.wait(0.5)
-        rs()
-    elseif hadChest then
+    if isOpeningChest then return end
+    isOpeningChest = true
+
+    pcall(function()
+        ws()
         task.wait(1)
-        rs()
-    end
+        tpToChest()
+        task.wait(0.5)
+        if S.autoChestEnabled then
+            keypress(0x45)
+            task.wait(S.chestHoldTime)
+            keyrelease(0x45)
+            task.wait(0.5)
+        end
+    end)
+
+    isOpeningChest = false
 end
 
 -- ═══════════════════════════════════════════════════════════
@@ -1488,7 +1499,7 @@ end)
 task.spawn(function()
     while true do
         task.wait(0.1)
-        if not S.fishingEnabled then
+        if not S.fishingEnabled or isOpeningChest then
             task.wait(0.5)
         else
             pcall(function()
