@@ -2,11 +2,7 @@
 --!optimize 2
 
 -- ═══════════════════════════════════════════════════════════
--- BRIDGER: WESTERN — Full Automation Script (Matcha)
--- Drawing-based UI | [Z] Menu | [K] Fishing
--- APIs: iskeypressed, iskeydown, ismouse1pressed,
---       memory_read, Drawing.new, keypress/keyrelease,
---       fireproximityprompt, notify, RunService.RenderStepped
+-- MADE BY RORRICM
 -- ═══════════════════════════════════════════════════════════
 
 if not math.clamp then
